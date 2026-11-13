@@ -1,46 +1,69 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>ethereum address verification</title>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ethereum Address Verification</title>
-    <!-- Fixed version of ethers.js -->
+
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.0.0/dist/ethers.umd.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>Verify Your Ethereum Address</h1>
-        <button id="openLink">Open Verify Page</button>
+        <h1>verify ethereum address</h1>
     </header>
-    
-    <section id="verifySignature">
-        <h2>Verify Signature</h2>
-        <input type="text" id="inputMessage" placeholder="Enter message" />
-        <input type="text" id="inputSignature" placeholder="Enter signature" />
-        <button id="verifyBtn">Verify</button>
-        <p>Signer's Address: <span id="signerAddress"></span></p>
+    <section>
+        <p>message</p>
+        <input type="text" id="inputMessage" placeholder="enter message" />
+        <p>signature</p>
+        <input type="text" id="inputSignature" placeholder="enter signature" />
+        <p>sign and verify</p>
+        <button id="sign">connect wallet & sign message</button>
+        <button id="verify">verify</button>
         <p id="error" style="color:red;"></p>
+        <p>signer's address: <span id="address"></span></p>
+        <p>signature: <span id="signature"></span></p>
     </section>
-
     <script>
-        // Function to open the verify.html page on exglos.com
-        document.getElementById('openLink').onclick = function () {
-            const verifyPage = "https://exglos.com/ownerproofbot/verify.html";
-            window.open(verifyPage, '_blank');
+        const params = new URLSearchParams(window.location.search);
+        let message = params.get("message") || Math.random().toString(36).substring(2);
+        document.getElementById('inputMessage').value = message;
+        document.getElementById('inputSignature').value = params.get('signature') || ''
+
+        document.getElementById('sign').onclick = async function () {
+            const message = document.getElementById('inputMessage').value;
+            if (typeof window.ethereum === 'undefined') {
+                document.getElementById('error').innerText = 'web3 not found';
+                return;
+            }
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            try {
+                document.getElementById('error').innerText = '';
+                const address = await signer.getAddress();
+                document.getElementById('address').innerText = address;
+                const signature = await signer.signMessage(message);
+                document.getElementById('inputSignature').value = signature;
+                document.getElementById('signature').innerText = signature;
+            } catch (error) {
+                document.getElementById('error').innerText = 'error: ' + error.message;
+                document.getElementById('address').innerText = '';
+                document.getElementById('signature').innerText = '';
+            }
         };
 
-        document.getElementById('verifyBtn').onclick = async function () {
+        document.getElementById('verify').onclick = async function () {
             const message = document.getElementById('inputMessage').value;
             const signature = document.getElementById('inputSignature').value;
-
             try {
-                // Verify the message and get the signer address
-                const signerAddress = ethers.utils.verifyMessage(message, signature);
-                document.getElementById('signerAddress').innerText = signerAddress;
-                document.getElementById('error').innerText = ''; // Clear any previous error
+                document.getElementById('error').innerText = '';
+                const address = ethers.utils.verifyMessage(message, signature);
+                document.getElementById('address').innerText = address;
             } catch (error) {
-                document.getElementById('error').innerText = 'Verification failed: ' + error.message;
-                document.getElementById('signerAddress').innerText = ''; // Clear previous address
+                document.getElementById('error').innerText = 'error: ' + error.message;
+                document.getElementById('address').innerText = '';
+                document.getElementById('signature').innerText = '';
             }
         }
     </script>
